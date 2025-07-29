@@ -133,7 +133,7 @@ def natural_keys(text):
     def __atoi(text):
         return int(text) if text.isdigit() else text
 
-    return [__atoi(c) for c in re.split('(\d+)', text)]
+    return [__atoi(c) for c in re.split(r'(\d+)', text)]
 
 
 def decode_base64(data):
@@ -264,11 +264,20 @@ class Registry:
         return None
 
     def list_images(self):
-        result = self.send('/v2/_catalog?n=10000')
-        if result is None:
-            return []
+        images = []
+        last = ""
+        # loop through all pages and get 10 records every time
+        while True:
+            result = self.send('/v2/_catalog?n=10&last=' + last)
+            if result is None:
+                return images
+            repos = json.loads(result.text)['repositories']
+            if len(repos) == 0:
+                break
+            images += repos
+            last = repos[-1]
 
-        return json.loads(result.text)['repositories']
+        return images
 
     def list_tags(self, image_name):
         result = self.send("/v2/{0}/tags/list".format(image_name))
